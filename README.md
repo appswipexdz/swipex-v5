@@ -5,7 +5,7 @@
 
 ## المتطلبات والتشغيل
 
-- Node.js 20 أو أحدث
+- Node.js 24.12 أو أحدث
 - npm 10 أو أحدث
 
 ```bash
@@ -23,19 +23,29 @@ npm run build
 npm run preview
 ```
 
-يتطلب اختبار قواعد Firestore وجود Java لتشغيل المحاكي المحلي.
+يتطلب اختبار قواعد Firestore وجود Java 21 لتشغيل المحاكي المحلي. ينشر المطور
+القواعد إلى المشروع بعد تسجيل الدخول باستخدام:
+
+```bash
+npx firebase-tools deploy --only firestore:rules --project swipex-v5
+```
+
+أضف `localhost` ونطاق الإنتاج إلى Authorized domains في إعدادات Firebase
+Authentication قبل تجربة تسجيل الدخول.
 
 ## إعداد Firebase
 
 1. في Firebase Console، فعّل Google وEmail/Password ضمن Authentication، وأنشئ
-   قاعدة Cloud Firestore.
-2. انسخ `.env.example` إلى `.env.local` وضع إعدادات تطبيق الويب في الملف
-   المحلي. لا ترفع `.env.local` إلى Git.
+   قاعدة Cloud Firestore في الموقع الذي اخترته للمشروع.
+2. أُعدّ ملف `.env.local` محليًا بإعدادات تطبيق الويب التي زوّدتنا بها. لا ترفع
+   هذا الملف إلى Git. لا يحتوي الإعداد على Measurement ID لأن Analytics غير
+   مفعّل.
 3. أضف إلى GitHub Actions Repository Variables المتغيرات
    `VITE_FIREBASE_API_KEY` و`VITE_FIREBASE_AUTH_DOMAIN` و
    `VITE_FIREBASE_PROJECT_ID` و`VITE_FIREBASE_STORAGE_BUCKET` و
    `VITE_FIREBASE_MESSAGING_SENDER_ID` و`VITE_FIREBASE_APP_ID`.
-4. قيّد مفتاح API بنطاقات النشر المصرح بها من Google Cloud Console. إعدادات
+4. قيّد مفتاح API بنطاقات النشر المصرح بها وبواجهات Firebase المطلوبة من Google
+   Cloud Console. إعدادات
    Firebase المضمّنة في تطبيق الويب ليست أسرارًا؛ قواعد Firestore والتحقق
    من المستخدم هما أساس حماية البيانات.
 

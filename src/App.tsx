@@ -9,13 +9,15 @@ import {
   type User,
 } from 'firebase/auth'
 import { getAuthErrorMessage } from './lib/authError'
-import { auth, missingFirebaseConfig } from './lib/firebase'
+import { auth, getDatabase } from './lib/firebase'
+import { missingFirebaseConfig } from './lib/firebaseApp'
 
 type AuthMode = 'sign-in' | 'sign-up'
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [authLoading, setAuthLoading] = useState(auth !== null)
+  const [firestoreReady, setFirestoreReady] = useState(false)
   const [busy, setBusy] = useState(false)
   const [mode, setMode] = useState<AuthMode>('sign-in')
   const [email, setEmail] = useState('')
@@ -23,20 +25,50 @@ function App() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!auth) return
+    const firebaseAuth = auth
+    if (!firebaseAuth) return
 
-    return onAuthStateChanged(
-      auth,
-      (nextUser) => {
+    let active = true
+    const unsubscribe = onAuthStateChanged(
+      firebaseAuth,
+      async (nextUser) => {
+        if (!active) return
+
         setUser(nextUser)
-        setAuthLoading(false)
+        setFirestoreReady(false)
+
+        if (!nextUser) {
+          setAuthLoading(false)
+          return
+        }
+
+        try {
+          await getDatabase()
+          if (active && firebaseAuth.currentUser?.uid === nextUser.uid) {
+            setFirestoreReady(true)
+          }
+        } catch (databaseError) {
+          console.error('Firestore initialization failed:', databaseError)
+          if (active && firebaseAuth.currentUser?.uid === nextUser.uid) {
+            setError('تم تسجيل الدخول، لكن تعذّر تهيئة قاعدة البيانات.')
+          }
+        } finally {
+          if (active) setAuthLoading(false)
+        }
       },
       (authStateError) => {
         console.error('Firebase auth state listener failed:', authStateError)
-        setError('تعذر التحقق من جلسة الدخول. أعد تحميل الصفحة أو سجّل الدخول مجددًا.')
-        setAuthLoading(false)
+        if (active) {
+          setError('تعذر التحقق من جلسة الدخول. أعد تحميل الصفحة أو سجّل الدخول مجددًا.')
+          setAuthLoading(false)
+        }
       },
     )
+
+    return () => {
+      active = false
+      unsubscribe()
+    }
   }, [])
 
   async function submitEmailAuth(event: FormEvent<HTMLFormElement>) {
@@ -106,7 +138,7 @@ function App() {
             </span>
           </a>
           <span className="rounded-full border border-brand-100 bg-white px-3 py-1.5 text-xs font-bold text-brand-700">
-            V5 · 5.0.0
+            V5 · 5.0.1
           </span>
         </header>
 
@@ -160,8 +192,9 @@ function App() {
                   {user.email}
                 </p>
                 <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm leading-6 text-emerald-800">
-                  تم تسجيل الدخول بنجاح. ستُضاف إدارة الطرود والمزامنة في المرحلة
-                  التالية.
+                  {firestoreReady
+                    ? 'تم تسجيل الدخول وتهيئة Firestore. ستُضاف إدارة الطرود والمزامنة في المرحلة التالية.'
+                    : 'تم تسجيل الدخول، لكن خدمة قاعدة البيانات لم تتهيأ بعد.'}
                 </p>
                 {error && <ErrorMessage message={error} />}
                 <button

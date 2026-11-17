@@ -1,15 +1,15 @@
 {
-  "version": "5.0.0",
+  "version": "5.0.1",
   "releasedAt": "2026-11-16",
   "notes": {
     "ar": [
-      "تأسيس النسخة الخامسة المستقلة."
+      "إضافة تسجيل الدخول وربط Firebase."
     ],
     "en": [
-      "Established the independent fifth version."
+      "Added sign-in and Firebase setup."
     ],
     "fr": [
-      "Création de la cinquième version indépendante."
+      "Ajout de la connexion et de Firebase."
     ]
   }
 }
