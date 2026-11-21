@@ -1,15 +1,15 @@
 {
-  "version": "5.0.1",
-  "releasedAt": "2026-11-16",
+  "version": "5.0.6",
+  "releasedAt": "2026-11-21",
   "notes": {
     "ar": [
-      "إضافة تسجيل الدخول وربط Firebase."
+      "تقريب الشريط العلوي من تصميم النسخة الأصلية."
     ],
     "en": [
-      "Added sign-in and Firebase setup."
+      "Aligned the top bar with the original app design."
     ],
     "fr": [
-      "Ajout de la connexion et de Firebase."
+      "Barre supérieure rapprochée du design de l’application d’origine."
     ]
   }
 }

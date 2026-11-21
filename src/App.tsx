@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react'
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
@@ -11,6 +11,12 @@ import {
 import { getAuthErrorMessage } from './lib/authError'
 import { auth, getDatabase } from './lib/firebase'
 import { missingFirebaseConfig } from './lib/firebaseApp'
+
+const ParcelWorkspace = lazy(() =>
+  import('./features/parcels/ParcelWorkspace').then(({ ParcelWorkspace }) => ({
+    default: ParcelWorkspace,
+  })),
+)
 
 type AuthMode = 'sign-in' | 'sign-up'
 
@@ -120,116 +126,112 @@ function App() {
 
   const isConfigured = missingFirebaseConfig.length === 0
 
-  return (
-    <main className="min-h-screen px-4 py-10 sm:px-8">
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl flex-col">
-        <header className="flex items-center justify-between">
-          <a className="flex items-center gap-3" href="/" aria-label="SwiPex">
-            <span className="grid size-11 place-items-center rounded-2xl bg-brand-600 text-lg font-extrabold text-white shadow-lg shadow-brand-600/20">
-              S
-            </span>
-            <span>
-              <span className="block text-lg font-extrabold tracking-tight text-slate-900">
-                SwiPex
-              </span>
-              <span className="block text-xs font-semibold text-slate-500">
-                النسخة الخامسة
-              </span>
-            </span>
-          </a>
-          <span className="rounded-full border border-brand-100 bg-white px-3 py-1.5 text-xs font-bold text-brand-700">
-            V5 · 5.0.1
-          </span>
-        </header>
-
-        <section className="my-auto grid gap-10 py-12 md:grid-cols-[1.2fr_0.8fr] md:items-center">
-          <div>
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-700">
-              <span className="size-2 rounded-full bg-emerald-500" />
-              إدارة توصيل الطرود، بحسابك الخاص
+  if (isConfigured && user && firestoreReady) {
+    return (
+      <Suspense
+        fallback={
+          <main className="min-h-screen px-4 py-10" role="status">
+            <p className="mx-auto max-w-5xl text-sm font-semibold text-slate-600">
+              جارٍ تحميل مساحة الطرود…
             </p>
-            <h1 className="max-w-2xl text-4xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-5xl">
-              تجربة أسرع،
-              <span className="block text-brand-700">وبنية جاهزة للنمو.</span>
-            </h1>
-            <p className="mt-5 max-w-xl text-base leading-8 text-slate-600">
-              سجّل الدخول للبدء. بياناتك منفصلة عن حسابات المستخدمين الآخرين
-              ومتاحة على أجهزتك بعد تفعيل المزامنة.
+          </main>
+        }
+      >
+        <ParcelWorkspace
+          busy={busy}
+          onSignOut={() => void signOutUser()}
+          signOutError={error}
+          user={user}
+        />
+      </Suspense>
+    )
+  }
+
+  return (
+    <main className="app-shell-background flex min-h-screen items-center px-4 py-8">
+      <div className="mx-auto w-full max-w-md">
+        <section
+          aria-labelledby="auth-title"
+          className="glass-panel rounded-3xl p-6 shadow-2xl sm:p-8"
+        >
+          <div className="mb-7 text-center">
+            <img
+              alt="SwiPex"
+              className="mx-auto mb-3 size-24 rounded-2xl shadow-lg"
+              height="96"
+              src="/icons/icon-192.png"
+              width="96"
+            />
+            <h1 className="text-3xl font-extrabold text-slate-900">SwiPex</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              نظام إدارة توصيل الطرود
             </p>
           </div>
 
-          <section
-            aria-labelledby="auth-title"
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5 sm:p-8"
-          >
-            {!isConfigured ? (
-              <div role="alert" className="text-sm leading-7 text-amber-900">
-                <h2 className="font-extrabold">إعداد Firebase غير مكتمل</h2>
-                <p className="mt-2">
-                  أضف متغيرات Firebase الناقصة إلى ملف <code>.env.local</code>،
-                  ثم أعد تشغيل خادم التطوير.
-                </p>
-                <p className="mt-2 text-xs" dir="ltr">
-                  {missingFirebaseConfig.join(', ')}
-                </p>
-              </div>
-            ) : authLoading ? (
-              <div
-                className="py-8 text-center text-sm font-semibold text-slate-600"
-                role="status"
+          <div className="mb-7 text-center">
+            <h2 className="text-xl font-extrabold text-slate-800" id="auth-title">
+              {mode === 'sign-in' ? 'مرحبًا بك!' : 'إنشاء حساب جديد'}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {mode === 'sign-in'
+                ? 'قم بتسجيل الدخول للمتابعة'
+                : 'أنشئ حسابك لمزامنة طرودك بأمان'}
+            </p>
+          </div>
+
+          {isConfigured && user && !firestoreReady && (
+            <div className="mb-5">
+              <p className="break-all text-center text-sm text-slate-600" dir="ltr">
+                {user.email}
+              </p>
+            </div>
+          )}
+
+          {!isConfigured ? (
+            <div role="alert" className="text-sm leading-7 text-amber-900">
+              <h2 className="font-extrabold">إعداد Firebase غير مكتمل</h2>
+              <p className="mt-2">
+                أضف متغيرات Firebase الناقصة إلى ملف <code>.env.local</code>،
+                ثم أعد تشغيل خادم التطوير.
+              </p>
+              <p className="mt-2 text-xs" dir="ltr">
+                {missingFirebaseConfig.join(', ')}
+              </p>
+            </div>
+          ) : authLoading ? (
+            <div
+              className="py-8 text-center text-sm font-semibold text-slate-600"
+              role="status"
+            >
+              جارٍ التحقق من جلسة الدخول…
+            </div>
+          ) : user ? (
+            <div>
+              <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-center text-sm leading-6 text-red-800">
+                تم تسجيل الدخول، لكن خدمة قاعدة البيانات لم تتهيأ بعد.
+              </p>
+              {error && <ErrorMessage message={error} />}
+              <button
+                className="mt-5 w-full rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={busy}
+                onClick={signOutUser}
+                type="button"
               >
-                جارٍ التحقق من جلسة الدخول…
-              </div>
-            ) : user ? (
-              <div>
-                <h2
-                  id="auth-title"
-                  className="text-xl font-extrabold text-slate-900"
-                >
-                  أهلًا بك
-                </h2>
-                <p className="mt-2 break-all text-sm text-slate-600" dir="ltr">
-                  {user.email}
-                </p>
-                <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm leading-6 text-emerald-800">
-                  {firestoreReady
-                    ? 'تم تسجيل الدخول وتهيئة Firestore. ستُضاف إدارة الطرود والمزامنة في المرحلة التالية.'
-                    : 'تم تسجيل الدخول، لكن خدمة قاعدة البيانات لم تتهيأ بعد.'}
-                </p>
-                {error && <ErrorMessage message={error} />}
-                <button
-                  className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={busy}
-                  onClick={signOutUser}
-                  type="button"
-                >
-                  {busy ? 'جارٍ تسجيل الخروج…' : 'تسجيل الخروج'}
-                </button>
-              </div>
-            ) : (
-              <>
-                <h2
-                  id="auth-title"
-                  className="text-xl font-extrabold text-slate-900"
-                >
-                  {mode === 'sign-in' ? 'تسجيل الدخول' : 'إنشاء حساب'}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  {mode === 'sign-in'
-                    ? 'استخدم حساب Google أو بريدك الإلكتروني.'
-                    : 'أنشئ حسابًا بالبريد الإلكتروني وكلمة المرور.'}
-                </p>
-
+                {busy ? 'جارٍ تسجيل الخروج…' : 'تسجيل الخروج'}
+              </button>
+            </div>
+          ) : (
+            <>
                 {error && <ErrorMessage message={error} />}
 
-                <form className="mt-6 space-y-4" onSubmit={submitEmailAuth}>
+                <form className="space-y-3" onSubmit={submitEmailAuth}>
                   <label className="block">
                     <span className="mb-2 block text-sm font-bold text-slate-700">
                       البريد الإلكتروني
                     </span>
                     <input
                       autoComplete="email"
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-left text-sm outline-none transition focus:border-brand-600 focus:ring-4 focus:ring-brand-100"
+                      className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-left text-sm text-slate-800 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-400/40"
                       dir="ltr"
                       disabled={busy}
                       onChange={(event) => setEmail(event.target.value)}
@@ -248,7 +250,7 @@ function App() {
                       autoComplete={
                         mode === 'sign-in' ? 'current-password' : 'new-password'
                       }
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-left text-sm outline-none transition focus:border-brand-600 focus:ring-4 focus:ring-brand-100"
+                      className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-left text-sm text-slate-800 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-400/40"
                       dir="ltr"
                       disabled={busy}
                       minLength={6}
@@ -260,7 +262,7 @@ function App() {
                   </label>
 
                   <button
-                    className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-extrabold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={busy}
                     type="submit"
                   >
@@ -279,7 +281,7 @@ function App() {
                 </div>
 
                 <button
-                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white/80 px-4 py-4 text-sm font-bold text-slate-700 shadow-lg transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={busy}
                   onClick={signInWithGoogle}
                   type="button"
@@ -288,10 +290,21 @@ function App() {
                   المتابعة باستخدام Google
                 </button>
 
+                <div className="mt-7 border-t border-slate-200 pt-5">
+                  <p className="mb-4 text-center text-xs text-slate-400">
+                    مزايا حسابك
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <AuthFeature color="blue" label="حساب خاص" symbol="◉" />
+                    <AuthFeature color="green" label="مزامنة حية" symbol="↻" />
+                    <AuthFeature color="purple" label="أجهزتك" symbol="▣" />
+                  </div>
+                </div>
+
                 <p className="mt-5 text-center text-sm text-slate-600">
                   {mode === 'sign-in' ? 'ليس لديك حساب؟' : 'لديك حساب بالفعل؟'}{' '}
                   <button
-                    className="font-extrabold text-brand-700 hover:text-brand-600"
+                    className="font-extrabold text-red-600 hover:text-red-700"
                     disabled={busy}
                     onClick={() => {
                       setError('')
@@ -305,13 +318,39 @@ function App() {
               </>
             )}
           </section>
-        </section>
-
-        <footer className="border-t border-slate-200 pt-4 text-xs leading-6 text-slate-500">
+        <footer className="mt-5 text-center text-xs leading-6 text-slate-500">
           سجّل الدخول بحسابك الشخصي. لا يوجد تسجيل دخول كضيف.
         </footer>
       </div>
     </main>
+  )
+}
+
+function AuthFeature({
+  color,
+  label,
+  symbol,
+}: {
+  color: 'blue' | 'green' | 'purple'
+  label: string
+  symbol: string
+}) {
+  const colors = {
+    blue: 'bg-blue-100 text-blue-600',
+    green: 'bg-green-100 text-green-600',
+    purple: 'bg-purple-100 text-purple-600',
+  }[color]
+
+  return (
+    <div className="p-2">
+      <span
+        aria-hidden="true"
+        className={`mx-auto mb-2 grid size-10 place-items-center rounded-full text-sm font-bold ${colors}`}
+      >
+        {symbol}
+      </span>
+      <span className="text-xs text-slate-500">{label}</span>
+    </div>
   )
 }
 
